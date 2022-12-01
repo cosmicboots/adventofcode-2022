@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{fs::{File, self}, io::Write, path::PathBuf};
 
 use clap::Parser;
 
@@ -16,8 +16,9 @@ fn main() {
     let bins_folder = PathBuf::from("src/bin/");
 
     if let Some(fname) = cli.generate {
-        let mut fpath = bins_folder.join(fname);
-        fpath.set_extension("rs");
+        let path = bins_folder.join(fname);
+        fs::create_dir_all(&path).unwrap();
+        let fpath = path.join("main.rs");
         if !fpath.exists() {
             let mut f = File::create(&fpath).expect("Failed to create new file");
             f.write_all(
@@ -26,7 +27,7 @@ fn main() {
     println!(\"Hello from {}!\");
 }}
 ",
-                    fpath.file_stem().unwrap().to_str().unwrap().to_owned()
+                    path.file_stem().unwrap().to_str().unwrap().to_owned()
                 )
                 .as_bytes(),
             )
