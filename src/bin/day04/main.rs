@@ -1,9 +1,11 @@
-use std::{error::Error, fmt::Display, fs::File, io::Read, ops::Range};
+use std::{
+    collections::HashSet, error::Error, fmt::Display, fs::File, io::Read, ops::RangeInclusive,
+};
 
-#[derive(Debug, Clone)]
-struct Assignment(Range<usize>);
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Assignment(RangeInclusive<usize>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct AssignmentPair {
     left: Assignment,
     right: Assignment,
@@ -18,9 +20,9 @@ impl From<&str> for AssignmentPair {
                 let raw: Vec<&str> = e.trim().split("-").collect();
                 let start = raw[0].parse::<usize>().unwrap();
                 let end = raw[1].parse::<usize>().unwrap();
-                start..(end + 1)
+                start..=end
             })
-            .collect::<Vec<Range<usize>>>();
+            .collect::<Vec<RangeInclusive<usize>>>();
         Self {
             left: Assignment(ranges[0].clone()),
             right: Assignment(ranges[1].clone()),
@@ -28,29 +30,17 @@ impl From<&str> for AssignmentPair {
     }
 }
 
-impl ToString for Assignment {
-    fn to_string(&self) -> String {
-        self.0
-            .clone()
-            .into_iter()
-            .map(|e| e.to_string() + ",")
-            .collect::<Vec<String>>()
-            .join("")
-    }
-}
-
 impl AssignmentPair {
     fn fully_contained(&self) -> bool {
-        let left = self.left.to_string();
-        let right = self.right.to_string();
-        if left.contains(&right) {
-            let x = left.find(&right).unwrap();
-            println!("{}\n{:>w$}", left, right, w = x + right.len());
-        } else if right.contains(&left) {
-            let x = right.find(&left).unwrap();
-            println!("{:>w$}\n{}", left, right, w = x + left.len());
-        }
-        (left.contains(&right) || right.contains(&left)) // && left != right
+        let left = self.left.0.clone().into_iter().collect::<HashSet<usize>>();
+        let right = self.right.0.clone().into_iter().collect::<HashSet<usize>>();
+        left.is_subset(&right) || right.is_subset(&left)
+    }
+
+    fn overlap(&self) -> bool {
+        let left = self.left.0.clone().into_iter().collect::<HashSet<usize>>();
+        let right = self.right.0.clone().into_iter().collect::<HashSet<usize>>();
+        !left.is_disjoint(&right)
     }
 }
 
@@ -59,10 +49,10 @@ impl Display for AssignmentPair {
         write!(
             f,
             "{}-{},{}-{}",
-            self.left.0.start,
-            self.left.0.end - 1,
-            self.right.0.start,
-            self.right.0.end - 1
+            self.left.0.start(),
+            self.left.0.end(),
+            self.right.0.start(),
+            self.right.0.end()
         )
     }
 }
@@ -80,14 +70,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|e| AssignmentPair::from(e))
         .collect::<Vec<AssignmentPair>>();
 
+    let mut matched_part1: Vec<AssignmentPair> = vec![];
+
     let total1: usize = pairs
         .clone()
         .into_iter()
         .map(|e| {
-            if e.left.0.start <= e.right.0.start && e.left.0.end >= e.right.0.end {
+            if e.left.0.start() <= e.right.0.start() && e.left.0.end() >= e.right.0.end() {
+                matched_part1.push(e);
                 return 1;
             }
-            if e.left.0.start >= e.right.0.start && e.left.0.end <= e.right.0.end {
+            if e.left.0.start() >= e.right.0.start() && e.left.0.end() <= e.right.0.end() {
+                matched_part1.push(e);
                 return 1;
             }
             return 0;
@@ -96,18 +90,35 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Total part 1: {}", total1);
 
+    let total1b: usize = pairs
+        .clone()
+        .into_iter()
+        .map(|e| if e.fully_contained() { 1 } else { 0 })
+        .sum();
+
+    println!("Total part 1b: {}", total1b);
+
     let total2: usize = pairs
         .clone()
         .into_iter()
         .map(|e| {
-            if e.left.0.start >= e.right.0.end || e.left.0.end <= e.right.0.start {
+            if e.left.0.start() > e.right.0.end() || e.left.0.end() < e.right.0.start() {
                 0
             } else {
                 1
             }
-        }).sum();
+        })
+        .sum();
 
     println!("Total part 2: {}", total2);
+
+    let total2b: usize = pairs
+        .clone()
+        .into_iter()
+        .map(|e| if e.overlap() { 1 } else { 0 })
+        .sum();
+
+    println!("Total part 2b: {}", total2b);
 
     Ok(())
 }
