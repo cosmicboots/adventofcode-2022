@@ -3,7 +3,7 @@ use std::{error::Error, fmt::Display, fs::File, io::Read, ops::Range};
 #[derive(Debug, Clone)]
 struct Assignment(Range<usize>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct AssignmentPair {
     left: Assignment,
     right: Assignment,
@@ -80,7 +80,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|e| AssignmentPair::from(e))
         .collect::<Vec<AssignmentPair>>();
 
-    let total: usize = pairs
+    let total1: usize = pairs
+        .clone()
         .into_iter()
         .map(|e| {
             if e.left.0.start <= e.right.0.start && e.left.0.end >= e.right.0.end {
@@ -93,7 +94,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .sum();
 
-    println!("Total: {}", total);
+    println!("Total part 1: {}", total1);
+
+    let total2: usize = pairs
+        .clone()
+        .into_iter()
+        .map(|e| {
+            if e.left.0.start >= e.right.0.end || e.left.0.end <= e.right.0.start {
+                0
+            } else {
+                1
+            }
+        }).sum();
+
+    println!("Total part 2: {}", total2);
 
     Ok(())
 }
